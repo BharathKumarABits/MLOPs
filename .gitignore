@@ -2,3 +2,6 @@ __pycache__/
 .ipynb_checkpoints/
 .pytest_cache/
 .coverage
+mlruns/
+mlartifacts/
+mlflow.db
