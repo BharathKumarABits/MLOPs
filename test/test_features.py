@@ -14,7 +14,7 @@ def _dense(matrix):
 
 def test_preprocessor_output_shape(raw_df):
     X = _features(raw_df)
-    assert build_preprocessor().fit_transform(X).shape == (len(X), 22)
+    assert build_preprocessor().fit_transform(X).shape == (len(X), 23)
 
 
 def test_preprocessor_removes_missing_values(raw_df):
