@@ -109,6 +109,7 @@ def run_candidate(name, estimator, grid, X_tr, X_te, y_tr, y_te):
 
     return {"name": name, "model": model, "cv": cv_scores, "test": test}
 
+
 def setup_mlflow():
     """Track runs in a local SQLite database; store artifacts in ./mlartifacts."""
     mlflow.set_tracking_uri("sqlite:///mlflow.db")
@@ -116,6 +117,7 @@ def setup_mlflow():
         mlflow.create_experiment(
             EXPERIMENT, artifact_location=Path("mlartifacts").resolve().as_uri())
     mlflow.set_experiment(EXPERIMENT)
+
 
 def main():
     setup_mlflow()

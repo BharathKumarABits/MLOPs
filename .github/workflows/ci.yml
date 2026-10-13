@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-test-train:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: flake8 heart_risk test scripts
+
+      - name: Unit tests
+        run: pytest -v --cov=heart_risk --cov-report=term-missing --cov-report=xml
+
+      - name: Train model
+        run: python -m heart_risk.train
+
+      - name: Quality gate
+        run: python scripts/check_model.py
+
+      - name: Upload model and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-and-reports
+          path: |
+            models/
+            report/experiment_summary.csv
+            coverage.xml
