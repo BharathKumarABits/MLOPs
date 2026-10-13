@@ -23,10 +23,10 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Lint
-        run: flake8 heart_risk test scripts
+        run: flake8 heart_risk test scripts api
 
       - name: Unit tests
-        run: pytest -v --cov=heart_risk --cov-report=term-missing --cov-report=xml
+        run: pytest -v --cov=heart_risk --cov=api --cov-report=term-missing --cov-report=xml
 
       - name: Train model
         run: python -m heart_risk.train

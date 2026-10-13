@@ -1,0 +1,13 @@
+.git
+.github
+.vscode
+__pycache__
+*.pyc
+notebooks
+data
+report
+screenshots
+test
+mlflow.db
+mlartifacts
+mlruns
