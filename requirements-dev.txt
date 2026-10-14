@@ -4,3 +4,4 @@ pytest-cov==7.1.0
 flake8==7.4.1
 httpx==0.28.1
 ipykernel==7.4.0
+python-docx==1.2.0
