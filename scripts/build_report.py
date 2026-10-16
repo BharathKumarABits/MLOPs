@@ -19,19 +19,22 @@ from docx.shared import Inches, Pt, RGBColor
 from matplotlib.figure import Figure
 from matplotlib.patches import FancyBboxPatch
 
-# ---- Edit these ---------------------------------------------------------------------------
-AUTHOR = "Your Name"
-STUDENT_ID = "Your BITS ID"
+
+AUTHOR = "Bharath Kumar A"
+STUDENT_ID = "2025AE05226"
 REPO_URL = "https://github.com/BharathKumarABits/MLOPs"
 
-# REPLACE these with your own observations from notebooks/01_eda.ipynb.
+
 EDA_OBSERVATIONS = [
-    "The classes are almost balanced (164 healthy, 139 with disease), so no resampling was "
-    "needed and accuracy is a reasonable metric next to recall and ROC-AUC.",
-    "thal (0.53), ca (0.46), exang (0.43), oldpeak (0.43) and cp (0.41) correlate most "
+    "TOf the 303 patients, 164 (54%) are healthy and 139 (46%) have heart disease, so the "
+    "split is nearly even. I did not resample, but I report recall and ROC-AUC next to "
+    "accuracy because missing a sick patient costs more than a false alarm.",
+    "Looking at the distributions categories thal (0.53), ca (0.46), exang (0.43), oldpeak (0.43)"
+    "and cp (0.41) correlate most "
     "strongly with the target; thalach correlates negatively (-0.42), meaning patients "
     "who reach a higher maximum heart rate are less likely to have the disease.",
-    "fbs (0.03) and chol (0.09) show almost no linear relationship with the target on their "
+    "Similarly for categories of fbs (0.03) and chol (0.09) show almost no linear relationship with"
+    "the target on their "
     "own, but they were kept: a weak feature can still help a multivariate model.",
     "cp, restecg, slope and thal are category codes, so Pearson correlations for them are "
     "only a rough guide; this is why they are one-hot encoded in the pipeline.",
