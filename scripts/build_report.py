@@ -6,6 +6,7 @@ Output:  report/MLOps_Assignment1_Report.docx
 Edit the constants and the text blocks below so the report reads in your own words.
 Screenshots are embedded automatically from screenshots/ (main body + appendix).
 """
+import csv
 import json
 from datetime import date
 from pathlib import Path
@@ -65,11 +66,18 @@ FEATURE_TABLE = [
     ("thal", "Thalassemia: 3 normal, 6 fixed, 7 reversible defect", "category"),
 ]
 
-RESULTS_TABLE = [
-    ("logreg_baseline", "0.907", "0.766", "0.958", "0.929", "0.869"),
-    ("logreg_tuned (selected)", "0.908", "0.828", "0.958", "0.929", "0.869"),
-    ("rf_baseline", "0.894", "0.783", "0.945", "0.964", "0.869"),
-    ("rf_tuned", "0.902", "0.764", "0.955", "0.929", "0.885"),
+METRIC_HEADER = ["Run", "Accuracy", "Precision", "Recall", "F1", "ROC-AUC"]
+CV_TABLE = [
+    ("logreg_baseline", "0.839", "0.877", "0.766", "0.814", "0.907"),
+    ("logreg_tuned (selected)", "0.859", "0.870", "0.828", "0.844", "0.908"),
+    ("rf_baseline", "0.797", "0.783", "0.783", "0.778", "0.894"),
+    ("rf_tuned", "0.810", "0.819", "0.764", "0.784", "0.902"),
+]
+TEST_TABLE = [
+    ("logreg_baseline", "0.869", "0.812", "0.929", "0.867", "0.958"),
+    ("logreg_tuned (selected)", "0.869", "0.812", "0.929", "0.867", "0.958"),
+    ("rf_baseline", "0.869", "0.794", "0.964", "0.871", "0.945"),
+    ("rf_tuned", "0.885", "0.839", "0.929", "0.881", "0.955"),
 ]
 
 # (file, caption, width in inches) for the main body, grouped by section key.
@@ -93,6 +101,28 @@ MAIN_FIGURES = {
         ("mon_03_grafana_dashboard.png", "Grafana dashboard under generated traffic", 6.0),
         ("mon_01_prometheus_targets.png", "Prometheus scraping both API pods (2/2 up)", 5.0),
     ],
+}
+
+
+APPENDIX_CAPTIONS = {
+    "ci_01_run_summary": "GitHub Actions run summary with uploaded artifacts",
+    "ci_03_pytest_log": "Unit test step log with coverage table",
+    "ci_05_failed_log": "Log of the deliberately failed run",
+    "docker_01_build": "Docker image build",
+    "docker_03_logs": "Container request logs",
+    "docker_05_swagger_overview": "Swagger UI overview",
+    "docker_06_swagger_predict": "Swagger UI: successful prediction",
+    "docker_07_swagger_validation_error": "Swagger UI: invalid input rejected (HTTP 422)",
+    "docker_08_swagger_getHealth": "Swagger UI: health endpoint",
+    "k8s_03_swagger": "Swagger UI through the LoadBalancer address",
+    "k8s_04_pod_logs": "Per-pod request logs (kubectl logs)",
+    "k8s_05_describe": "Deployment description (replicas and probes)",
+    "mlflow_02_compare_chart": "MLflow run comparison chart",
+    "mlflow_02_compare_table": "MLflow run comparison table",
+    "mlflow_03_logreg_tuned_overview": "MLflow overview of the selected run",
+    "mlflow_06_model": "MLflow logged model",
+    "mon_02_prometheus_query": "Prometheus query of api_requests_total",
+    "mon_04_pod_logs": "API request logs from the pods",
 }
 
 
@@ -292,11 +322,24 @@ class Report:
             and f.name not in self.used)
         for i in range(0, len(remaining), 2):
             chunk = remaining[i:i + 2]
-            items = [(f, f.stem.replace("_", " ")) for f in chunk]
+            items = [(f, APPENDIX_CAPTIONS.get(f.stem, f.stem.replace("_", " "))) for f in chunk]
             if len(items) == 1:
                 self.figure(items[0][0], items[0][1], 3.1)
             else:
                 self.pair(items[0], items[1])
+
+
+def best_params(run_name):
+    """Tuned hyperparameters of a run, read from report/experiment_summary.csv."""
+    summary = ROOT / "report" / "experiment_summary.csv"
+    if not summary.exists():
+        return {}
+    with summary.open() as handle:
+        for row in csv.DictReader(handle):
+            if row.get("tags.mlflow.runName") == run_name:
+                return {key.replace("params.clf__", ""): value for key, value in row.items()
+                        if key.startswith("params.clf__") and value}
+    return {}
 
 
 def load_card():
@@ -425,6 +468,8 @@ def build():
                   3.4)
     report.figure(FIGS / "numeric_histograms.png", "Distributions of numeric features by class",
                   6.2)
+    report.figure(FIGS / "categorical_vs_target.png",
+                  "Categorical features versus the target", 6.2)
     report.figure(FIGS / "correlation_heatmap.png", "Correlation heatmap", 4.6)
     report.p("Observations:")
     report.bullets(EDA_OBSERVATIONS)
@@ -462,9 +507,11 @@ def build():
                               "min_samples_leaf in {1, 3, 5}"),
         ], widths=[1.6, 4.8])
     report.h2("5.3 Results")
-    report.table(
-        ["Run", "CV ROC-AUC", "CV recall", "Test ROC-AUC", "Test recall", "Test accuracy"],
-        RESULTS_TABLE, widths=[1.9, 0.9, 0.8, 1.0, 0.9, 0.9], bold_rows=(1,))
+    report.p("Mean 5-fold cross-validation scores on the training split:")
+    report.table(METRIC_HEADER, CV_TABLE, widths=[1.9, 0.9, 0.9, 0.9, 0.9, 0.9], bold_rows=(1,))
+    report.p("Scores on the 61-patient hold-out test split:")
+    report.table(METRIC_HEADER, TEST_TABLE, widths=[1.9, 0.9, 0.9, 0.9, 0.9, 0.9],
+                 bold_rows=(1,))
     cv = card.get("cv_mean", {})
     report.p(
         "The selected model is the tuned Logistic Regression (C = 1, class_weight = balanced), "
@@ -477,6 +524,10 @@ def build():
         "holds only 61 patients, so a difference of one patient moves accuracy by 1.6 "
         "points; for that reason cross-validation is treated as the main estimate and the "
         "test results as confirmation.")
+    rf_settings = best_params("rf_tuned")
+    if rf_settings:
+        report.p("Best Random Forest settings from the grid search: "
+                 + ", ".join(f"{k} = {v}" for k, v in sorted(rf_settings.items())) + ".")
 
     # ---- 6. Experiment tracking
     report.h1("6. Experiment tracking with MLflow")
@@ -507,6 +558,15 @@ def build():
         "Clean-environment proof: the CI job installs the pinned requirements on a fresh "
         "runner and runs every step from scratch.",
     ])
+    report.p("Loading the packaged model for inference:")
+    report.code(
+        "from heart_risk.predict import predict_one\n"
+        'predict_one({"age": 55, "sex": 1, "cp": 4, "trestbps": 140, "chol": 250,\n'
+        '             "fbs": 0, "restecg": 1, "thalach": 130, "exang": 1, "oldpeak": 2.0,\n'
+        '             "slope": 2, "ca": 1, "thal": 7})')
+    clean_shot = SHOTS / "repro_01_clean_clone.png"
+    if clean_shot.exists():
+        report.figure(clean_shot, "Fresh clone: install from requirements, tests, training", 5.4)
 
     # ---- 8. CI/CD
     report.h1("8. CI/CD and automated testing")
@@ -567,6 +627,17 @@ def build():
         "(Minikube tunnel provides the external address) and a headless Service lets "
         "Prometheus discover every pod. The whole deployment is reproducible with "
         "scripts/deploy_local.sh.")
+    report.h2("10.1 Accessing the deployed API")
+    report.p(
+        "The API is not hosted on a public address; it runs in the local Minikube cluster. "
+        "To reach it, keep minikube tunnel running in a second terminal, read the external "
+        "address of the service and call the endpoints:")
+    report.code(
+        "kubectl get svc heart-risk-api          # note the EXTERNAL-IP column\n"
+        "curl -s http://<EXTERNAL-IP>:8000/health\n"
+        'curl -s -X POST http://<EXTERNAL-IP>:8000/predict -H "Content-Type: application/json" \\\n'
+        "     -d @api/sample_request.json\n"
+        "# interactive documentation: http://<EXTERNAL-IP>:8000/docs")
     report.main_figures("k8s")
 
     # ---- 11. Monitoring
